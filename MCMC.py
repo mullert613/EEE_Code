@@ -90,6 +90,11 @@ def loglikelihood(theta_0,bloodmealcounts,bloodmealtimes):  #loglikelihood for t
 	#return numpy.sum(numpy.sum(p*(bloodmealcounts-numpy.sum(bloodmealcounts,0)),1))  # The original loglikelihood, which we haven't been able to recreate
 	return numpy.sum(numpy.sum(logp*(bloodmealcounts)))  #This sums over the likelihoods of each a,b may be worth examining individually
 
+def bm_polynomial_loglikelihood(theta_0,counts,times,poly_deg):
+	q = numpy.polyval(theta_0,times)
+	logp = numpy.vstack((q-numpy.log(1+numpy.sum(numpy.exp(q),0)),-numpy.log(1+numpy.sum(numpy.exp(q),0))))
+	return numpy.sum(numpy.sum(logp*(counts)))
+
 def gauss_log_lik(mu,sig_square,d):
 	return -numpy.sum((d-mu)**2/(2*sig_square))	
 
