@@ -8,26 +8,29 @@ import MCMC
 import BirdCount
 import Seasonal_ODE
 
-def get_bloodmeal_sample(datafile,loglikelihood,dof=4,pc=4):
+def get_bloodmeal_sample(datafile,loglikelihood,poly_deg,dof=4,pc=4,maxruns=50000):
 	bm = pd.read_csv(datafile,index_col=0)
 	#bm=bm.drop("Total",axis=1)
 	N=len(bm)
 	time = numpy.array([int(x) for x in bm.columns])
-	init_guess = numpy.zeros(2*(N-1))
+	init_guess = numpy.zeros((poly_deg+1)*(N-1))
 	loglikargs=(bm.as_matrix(),time)
 	the_0 = MCMC.sample_dist(init_guess,pc,loglikelihood,loglikargs)
-	theta_bm,k_bm=MCMC.run_MCMC_convergence(init_guess,loglikelihood,loglikargs=(bm.as_matrix(),time),maxruns=50000,pc=4)
+	theta_bm,k_bm=MCMC.run_MCMC_convergence(init_guess,loglikelihood,loglikargs=(bm.as_matrix(),time),maxruns=maxruns,pc=4)
 
 	n=len(bm.as_matrix())
 	results = theta_bm[0][500::100]
-	a = results[:,0::2]
-	b = results[:,1::2]
-	a0= numpy.percentile(a,5,axis=0)
-	a1= numpy.percentile(a,95,axis=0)
-	amean = numpy.mean(a,axis=0)
-	b0= numpy.percentile(b,5,axis=0)
-	b1= numpy.percentile(b,95,axis=0)
-	bmean = numpy.mean(b,axis=0)
+	coeff = numpy.zeros((poly_deg+1,len(results)/(poly_deg+1)))
+	for j in range(poly_deg+1):
+		coeff[j,:] = results[:,j::poly_deg+1]
+	# a = results[:,0::2]
+	# b = results[:,1::2]
+	# a0= numpy.percentile(a,5,axis=0)
+	# a1= numpy.percentile(a,95,axis=0)
+	# amean = numpy.mean(a,axis=0)
+	# b0= numpy.percentile(b,5,axis=0)
+	# b1= numpy.percentile(b,95,axis=0)
+	# bmean = numpy.mean(b,axis=0)
 
 	return(amean,bmean,results)
 

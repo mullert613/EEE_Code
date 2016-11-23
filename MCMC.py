@@ -90,8 +90,14 @@ def loglikelihood(theta_0,bloodmealcounts,bloodmealtimes):  #loglikelihood for t
 	#return numpy.sum(numpy.sum(p*(bloodmealcounts-numpy.sum(bloodmealcounts,0)),1))  # The original loglikelihood, which we haven't been able to recreate
 	return numpy.sum(numpy.sum(logp*(bloodmealcounts)))  #This sums over the likelihoods of each a,b may be worth examining individually
 
-def bm_polynomial_loglikelihood(theta_0,counts,times,poly_deg):
-	q = numpy.polyval(theta_0,times)
+def bm_polynomial_loglikelihood(theta_0,counts,times):  #Proposed updated loglikelihood for bloodmeals
+	param_count = len(counts)-1  # For bm, since the last population is determined from the others, is 1 less than length
+	poly_deg = len(theta_0)//param_count-1
+	coeff = numpy.zeros((param_count,poly_deg+1))
+	for j in range(poly_deg+1):
+		coeff[:,j] = theta_0[j::poly_deg+1]
+	q = numpy.array([numpy.polyval(val,times) for val in coeff])
+	#q = numpy.polyval(theta_0,times) # This is incorrect
 	logp = numpy.vstack((q-numpy.log(1+numpy.sum(numpy.exp(q),0)),-numpy.log(1+numpy.sum(numpy.exp(q),0))))
 	return numpy.sum(numpy.sum(logp*(counts)))
 
