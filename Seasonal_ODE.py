@@ -32,8 +32,8 @@ def alpha_calc(bm,counts):   #Seems to work appropriately for a bloodmeal value 
 	return alpha_val/alpha_val[-1]
 
 def alpha_test(bm,bc_coeff_mat,tstart,tend):
-	bc_coeff_mat=BirdCount.get_birdcounts_sample("Days_BirdCounts.csv",lin_poiss_log_lik)
-	bm_amean,bm_bmean = get_bloodmeal_sample("Days_BloodMeal.csv",loglikelihood)
+	bc_coeff_mat,results=BirdCount.get_birdcounts_sample("Days_BirdCounts.csv",lin_poiss_log_lik)
+	bm_coeff_mat,results = get_bloodmeal_sample("Days_BloodMeal.csv",loglikelihood)
 	bm = pd.read_csv("Days_BloodMeal.csv",index_col=0)
 	bm=bm.drop("Total",axis=1)
 	bc = pd.read_csv("Days_BirdCounts.csv",index_col=0)
@@ -46,7 +46,7 @@ def alpha_test(bm,bc_coeff_mat,tstart,tend):
 
 	
 
-def rhs(Y,t, beta1, beta2, gammab, v, b, d, dv, dEEE, bc_coeff_mat,bm_amean,bm_bmean,mospop,mosprime,mosin,fun,mos_coeff,p):
+def rhs(Y,t, beta1, beta2, gammab, v, b, d, dv, dEEE, bc_coeff_mat,bm_coeff_mat,mospop,mosprime,mosin,fun,mos_coeff,p):
 	# Consider adding epsilon term , for proportion infected entering population eps = .001
 	eps = .001
 	s=Y[0:p]
@@ -54,7 +54,7 @@ def rhs(Y,t, beta1, beta2, gammab, v, b, d, dv, dEEE, bc_coeff_mat,bm_amean,bm_b
 	r=Y[2*p:3*p]
 	sv=Y[-2]
 	iv=Y[-1]
-	alpha_val = alpha_calc(bloodmeal.bloodmeal_function(bm_amean,bm_bmean,t),BirdCount.birdcounts_function(bc_coeff_mat,t))
+	alpha_val = alpha_calc(bloodmeal.bloodmeal_function(bm_coeff_mat,t),BirdCount.birdcounts_function(bc_coeff_mat,t))
 	N=BirdCount.birdcounts_function(bc_coeff_mat,t)
 	denom = numpy.dot(N,alpha_val)
 	lambdab = beta1*v*iv*numpy.array(alpha_val)/denom
@@ -69,7 +69,7 @@ def rhs(Y,t, beta1, beta2, gammab, v, b, d, dv, dEEE, bc_coeff_mat,bm_amean,bm_b
 	dY = numpy.hstack((ds,di,dr,dsv,div))
 	return dY
 
-def test_rhs(Y,t, beta1_rho,beta2, gammab, v, b, d, dv, dEEE, bc_coeff_mat,bm_amean,bm_bmean,mospop,mosprime,mosin,fun,mos_coeff,p):
+def test_rhs(Y,t, beta1_rho,beta2, gammab, v, b, d, dv, dEEE, bc_coeff_mat,bm_coeff_mat,mospop,mosprime,mosin,fun,mos_coeff,p):
 	# Here beta1 = beta1/rho_v, where Nv = theta_v/rho_v
 	eps = .001
 	s=Y[0:p]
@@ -78,7 +78,7 @@ def test_rhs(Y,t, beta1_rho,beta2, gammab, v, b, d, dv, dEEE, bc_coeff_mat,bm_am
 	sv=Y[-2]
 	iv=Y[-1]
 
-	alpha_val = alpha_calc(bloodmeal.bloodmeal_function(bm_amean,bm_bmean,t),BirdCount.birdcounts_function(bc_coeff_mat,t))
+	alpha_val = alpha_calc(bloodmeal.bloodmeal_function(bm_coeff_mat,t),BirdCount.birdcounts_function(bc_coeff_mat,t))
 	theta=BirdCount.birdcounts_function(bc_coeff_mat,t)		# Theta is the vector of the MCMC sample coeffieicents
 	theta_v = bloodmeal.vector_pop(mos_coeff,t)
 	denom = numpy.dot(theta,alpha_val)
@@ -95,7 +95,7 @@ def test_rhs(Y,t, beta1_rho,beta2, gammab, v, b, d, dv, dEEE, bc_coeff_mat,bm_am
 	dY = numpy.hstack((ds,di,dr,dsv,div))
 	return dY
 
-def log_test_rhs(Y,t, beta1_rho,beta2, gammab, v, b, d, dv, dEEE, bc_coeff_mat,bm_amean,bm_bmean,mospop,mosprime,mosin,fun,mos_coeff,p):
+def log_test_rhs(Y,t, beta1_rho,beta2, gammab, v, b, d, dv, dEEE, bc_coeff_mat,bm_coeff_mat,mospop,mosprime,mosin,fun,mos_coeff,p):
 	eps = .001
 	Y = Y.clip(-20,numpy.inf)
 	s=Y[0:p]
@@ -103,7 +103,7 @@ def log_test_rhs(Y,t, beta1_rho,beta2, gammab, v, b, d, dv, dEEE, bc_coeff_mat,b
 	sv=Y[-2]
 	iv=Y[-1]
 
-	alpha_val = alpha_calc(bloodmeal.bloodmeal_function(bm_amean,bm_bmean,t),BirdCount.birdcounts_function(bc_coeff_mat,t))
+	alpha_val = alpha_calc(bloodmeal.bloodmeal_function(bm_coeff_mat,t),BirdCount.birdcounts_function(bc_coeff_mat,t))
 	theta=BirdCount.birdcounts_function(bc_coeff_mat,t)		# Theta is the vector of the MCMC sample coeffieicents
 	theta_v = bloodmeal.vector_pop(mos_coeff,t)
 	denom = numpy.dot(theta,alpha_val)
@@ -138,10 +138,10 @@ def ode_solver(Y0,t,args=()):
 		Y[i] = solver.y
 	return(Y)
 
-def run_ode_solver(beta1,rhs_func,bm_amean,bm_bmean,bc_coeff_mat,mos_coeff,tstart,tend,flag):
+def run_ode_solver(beta1,rhs_func,bm_coeff_mat,bc_coeff_mat,mos_coeff,tstart,tend,flag):
 	# Set up to run the ODE using the ode_solver function, which manually integrates the ode for each iteration 
 
-	p = len(bm_amean)+1
+	p = len(bm_coeff_mat[:,0])+1
 	beta2 = 1
 	gammab = .1*numpy.ones(p)
 	v=.14			# Biting Rate of Vectors on Hosts
@@ -167,11 +167,11 @@ def run_ode_solver(beta1,rhs_func,bm_amean,bm_bmean,bc_coeff_mat,mos_coeff,tstar
 		R0 = 0*numpy.ones(p)
 	Y0 = numpy.hstack((S0, I0, R0, Sv, Iv))
 	#Y = scipy.integrate.odeint(rhs_func,Y0,T,args = (beta1, beta2, gammab, v, b, d, dv, dEEE, bc_coeff_mat,bm_amean,bm_bmean,bloodmeal.vector_pop,bloodmeal.vector_derivative,bloodmeal.vector_in,bloodmeal.fun,mos_coeff,p))
-	Y = ode_solver(Y0,T,args = (beta1, beta2, gammab, v, b, d, dv, dEEE, bc_coeff_mat,bm_amean,bm_bmean,bloodmeal.vector_pop,bloodmeal.vector_derivative,bloodmeal.vector_in,bloodmeal.fun,mos_coeff,p))
+	Y = ode_solver(Y0,T,args = (beta1, beta2, gammab, v, b, d, dv, dEEE, bc_coeff_mat,bm_coeff_mat,bloodmeal.vector_pop,bloodmeal.vector_derivative,bloodmeal.vector_in,bloodmeal.fun,mos_coeff,p))
 	return(Y)
 
-def run_ode(beta1,rhs_func,bm_amean,bm_bmean,bc_coeff_mat,mos_coeff,tstart,tend,flag):
-	p = len(bm_amean)+1
+def run_ode(beta1,rhs_func,bm_coeff_mat,bc_coeff_mat,mos_coeff,tstart,tend,flag):
+	p = len(bm_coeff_mat[:,0])+1
 	beta2 = 1
 	gammab = .1*numpy.ones(p)
 	v=.14			# Biting Rate of Vectors on Hosts
@@ -204,7 +204,7 @@ def run_ode(beta1,rhs_func,bm_amean,bm_bmean,bc_coeff_mat,mos_coeff,tstart,tend,
 		S0 = numpy.log(.99)*numpy.ones(p)
 		I0 = numpy.log(.01)*numpy.ones(p)
 		Y0 = numpy.hstack((S0, I0, Sv, Iv))
-	Y = scipy.integrate.odeint(rhs_func,Y0,T,args = (beta1, beta2, gammab, v, b, d, dv, dEEE, bc_coeff_mat,bm_amean,bm_bmean,bloodmeal.vector_pop,bloodmeal.vector_derivative,bloodmeal.vector_in,bloodmeal.fun,mos_coeff,p))
+	Y = scipy.integrate.odeint(rhs_func,Y0,T,args = (beta1, beta2, gammab, v, b, d, dv, dEEE, bc_coeff_mat,bm_coeff_mat,bloodmeal.vector_pop,bloodmeal.vector_derivative,bloodmeal.vector_in,bloodmeal.fun,mos_coeff,p))
 	return(Y)
 	
 def get_SIR_vals(Y,p):		# Takes the values from scipy.integrate.odeint and returns the SIR vals
@@ -222,12 +222,12 @@ def get_SI_vals(Y,p):  # for the log function that doesn't calculate R
 	iv=Y[:,-1]
 	return(S,I,sv,iv)
 
-def eval_log_results(Y,bm_amean,bm_bmean,bc_coeff_mat,mos_coeff,tstart,tend,bird_data_file):
+def eval_log_results(Y,bm_coeff_mat,bc_coeff_mat,mos_coeff,tstart,tend,bird_data_file):
 	birdnames = pd.read_csv(bird_data_file,index_col=0).index
 	name_list = list(birdnames)
 	name_list.append('Vector')
 	T = scipy.linspace(tstart,tend,1001)
-	p = len(bm_amean)+1
+	p = len(bm_coeff_mat[:,0])+1
 	s,i,sv,iv = get_SI_vals(Y,p)
 	bc = numpy.zeros((p,len(T)))
 	bm = numpy.zeros((p,len(T)))
@@ -235,7 +235,7 @@ def eval_log_results(Y,bm_amean,bm_bmean,bc_coeff_mat,mos_coeff,tstart,tend,bird
 	mos_pop = numpy.zeros(len(T))
 	for j in range(len(T)):
 		bc[:,j] = BirdCount.birdcounts_function(bc_coeff_mat,T[j])
-		bm[:,j] = bloodmeal.bloodmeal_function(bm_amean,bm_bmean,T[j])
+		bm[:,j] = bloodmeal.bloodmeal_function(bm_coeff_mat,T[j])
 		mos_pop[j] = bloodmeal.vector_pop(mos_coeff,T[j])
 		alpha_val[:,j] = alpha_calc(bm[:,j],bc[:,j])
 	sym = ['b','g','r','c','m','y','k','--','g--']
@@ -260,12 +260,12 @@ def eval_log_results(Y,bm_amean,bm_bmean,bc_coeff_mat,mos_coeff,tstart,tend,bird
 	pylab.title("Feeding Index Values")
 	return()
 
-def eval_ode_results(Y,bm_amean,bm_bmean,bc_coeff_mat,mos_coeff,tstart,tend,bird_data_file,flag):	
+def eval_ode_results(Y,bm_coeff_mat,bc_coeff_mat,mos_coeff,tstart,tend,bird_data_file,flag):	
 	birdnames = pd.read_csv(bird_data_file,index_col=0).index
 	name_list = list(birdnames)
 	name_list.append('Vector')
 	T = scipy.linspace(tstart,tend,1001)
-	p = len(bm_amean)+1
+	p = len(bm_coeff_mat[:,0])+1
 	s,i,r,sv,iv = get_SIR_vals(Y,p)
 	bc = numpy.zeros((p,len(T)))
 	bm = numpy.zeros((p,len(T)))
@@ -273,7 +273,7 @@ def eval_ode_results(Y,bm_amean,bm_bmean,bc_coeff_mat,mos_coeff,tstart,tend,bird
 	mos_pop = numpy.zeros(len(T))
 	for j in range(len(T)):
 		bc[:,j] = BirdCount.birdcounts_function(bc_coeff_mat,T[j])
-		bm[:,j] = bloodmeal.bloodmeal_function(bm_amean,bm_bmean,T[j])
+		bm[:,j] = bloodmeal.bloodmeal_function(bm_coeff_mat,T[j])
 		alpha_val[:,j] = alpha_calc(bm[:,j],bc[:,j])
 		mos_pop[j] = bloodmeal.vector_pop(mos_coeff,T[j])	
 	sym = ['b','g','r','c','m','y','k','--','g--']
@@ -305,9 +305,9 @@ def eval_ode_results(Y,bm_amean,bm_bmean,bc_coeff_mat,mos_coeff,tstart,tend,bird
 	pylab.title("Feeding Index Values")
 	return()
 
-def findbeta(beta1,rhs_func,bm_amean,bm_bmean,bc_coeff_mat,mos_coeff,tstart,tend,flag,ODE_flag):
-	p = len(bm_amean)+1
-	Y = run_ode(beta1,rhs_func,bm_amean,bm_bmean,bc_coeff_mat,mos_coeff,tstart,tend,flag)
+def findbeta(beta1,rhs_func,bm_coeff_mat,bc_coeff_mat,mos_coeff,tstart,tend,flag,ODE_flag):  
+	p = len(bm_coeff_mat[:,0])+1
+	Y = run_ode(beta1,rhs_func,bm_coeff_mat,bc_coeff_mat,mos_coeff,tstart,tend,flag)
 	s,i,r,sv,iv = get_SIR_vals(Y,p)
 	N=s+i+r
 	if ODE_flag==0:
@@ -321,7 +321,7 @@ def findbeta(beta1,rhs_func,bm_amean,bm_bmean,bc_coeff_mat,mos_coeff,tstart,tend
 		final = finalrec-.13
 	return numpy.abs(final)
 
-def debug_fun(Y,T, beta1_rho,beta2, gammab, v, b, d, dv, dEEE, bc_coeff_mat,bm_amean,bm_bmean,mospop,mosprime,mosin,fun,mos_coeff,p):
+def debug_fun(Y,T, beta1_rho,beta2, gammab, v, b, d, dv, dEEE, bc_coeff_mat,bm_coeff_mat,mospop,mosprime,mosin,fun,mos_coeff,p):
 	ds = []
 	di = []
 	dsv = []
@@ -334,7 +334,7 @@ def debug_fun(Y,T, beta1_rho,beta2, gammab, v, b, d, dv, dEEE, bc_coeff_mat,bm_a
 	iv=Y[-1]
 	dt = T[1]-T[0]
 	for t in T:
-		alpha_val = alpha_calc(bloodmeal.bloodmeal_function(bm_amean,bm_bmean,t),BirdCount.birdcounts_function(bc_coeff_mat,t))
+		alpha_val = alpha_calc(bloodmeal.bloodmeal_function(bm_coeff_mat,t),BirdCount.birdcounts_function(bc_coeff_mat,t))
 		theta=BirdCount.birdcounts_function(bc_coeff_mat,t)		# Theta is the vector of the MCMC sample coeffieicents
 		theta_v = bloodmeal.vector_pop(mos_coeff,t)
 		denom = numpy.dot(theta,alpha_val)
@@ -356,7 +356,7 @@ def debug_fun(Y,T, beta1_rho,beta2, gammab, v, b, d, dv, dEEE, bc_coeff_mat,bm_a
 
 	return(ds,di,dsv,div,lbdv)
 
-def get_ODE_vals(Y,T, beta1_rho,beta2, gammab, v, b, d, dv, dEEE, bc_coeff_mat,bm_amean,bm_bmean,mospop,mosprime,mosin,fun,mos_coeff,p):
+def get_ODE_vals(Y,T, beta1_rho,beta2, gammab, v, b, d, dv, dEEE, bc_coeff_mat,bm_coeff_mat,mospop,mosprime,mosin,fun,mos_coeff,p):
 	ds = []
 	di = []
 	dsv = []
@@ -370,7 +370,7 @@ def get_ODE_vals(Y,T, beta1_rho,beta2, gammab, v, b, d, dv, dEEE, bc_coeff_mat,b
 	iv=Y[-1]
 	dt = T[1]-T[0]
 	for t in T:
-		alpha_val = alpha_calc(bloodmeal.bloodmeal_function(bm_amean,bm_bmean,t),BirdCount.birdcounts_function(bc_coeff_mat,t))
+		alpha_val = alpha_calc(bloodmeal.bloodmeal_function(bm_coeff_mat,t),BirdCount.birdcounts_function(bc_coeff_mat,t))
 		theta=BirdCount.birdcounts_function(bc_coeff_mat,t)		# Theta is the vector of the MCMC sample coeffieicents
 		theta_v = bloodmeal.vector_pop(mos_coeff,t)
 		denom = numpy.dot(theta,alpha_val)

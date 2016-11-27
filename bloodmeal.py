@@ -7,22 +7,22 @@ import joblib
 import MCMC
 import BirdCount
 import Seasonal_ODE
-
+# Changes Made Here, finish this
 def get_bloodmeal_sample(datafile,loglikelihood,poly_deg,dof=4,pc=4,maxruns=50000):
 	bm = pd.read_csv(datafile,index_col=0)
 	#bm=bm.drop("Total",axis=1)
 	N=len(bm)
 	time = numpy.array([int(x) for x in bm.columns])
-	init_guess = numpy.zeros((poly_deg+1)*(N-1))
+	init_guess = .5*numpy.ones((poly_deg+1)*(N-1))
 	loglikargs=(bm.as_matrix(),time)
-	the_0 = MCMC.sample_dist(init_guess,pc,loglikelihood,loglikargs)
+	#the_0 = MCMC.sample_dist(init_guess,pc,loglikelihood,loglikargs)
 	theta_bm,k_bm=MCMC.run_MCMC_convergence(init_guess,loglikelihood,loglikargs=(bm.as_matrix(),time),maxruns=maxruns,pc=4)
 
 	n=len(bm.as_matrix())
 	results = theta_bm[0][500::100]
-	coeff = numpy.zeros((poly_deg+1,len(results)/(poly_deg+1)))
+	coeff_mean = numpy.zeros((N-1,poly_deg+1))
 	for j in range(poly_deg+1):
-		coeff[j,:] = results[:,j::poly_deg+1]
+		coeff_mean[:,j] = numpy.mean(results[:,j::poly_deg+1],axis=0)
 	# a = results[:,0::2]
 	# b = results[:,1::2]
 	# a0= numpy.percentile(a,5,axis=0)
@@ -32,7 +32,7 @@ def get_bloodmeal_sample(datafile,loglikelihood,poly_deg,dof=4,pc=4,maxruns=5000
 	# b1= numpy.percentile(b,95,axis=0)
 	# bmean = numpy.mean(b,axis=0)
 
-	return(amean,bmean,results)
+	return(coeff_mean,results)
 
 def get_vector_sample(datafile,loglikelihood,poly_deg,dof=4,pc=4,maxruns=50000):
 	vc = pd.read_csv(datafile,index_col=0)
@@ -74,20 +74,18 @@ def vc_init_guess(datafile,poly_deg):
 	x = numpy.linalg.lstsq(A,b.T)
 	return(x[0].T)
 
-def bloodmeal_function(amean,bmean,t):  # Currently as defined works for single time value, not vector
-	amean = numpy.array(amean)
-	bmean = numpy.array(bmean)
-	q = amean*t+bmean
+def bloodmeal_function(coeff,t):  # Currently as defined works for single time value, not vector
+	q = numpy.array([numpy.polyval(val,t) for val in coeff])
 	p = numpy.append(numpy.exp(q)/(1+sum(numpy.exp(q))),1/(1+sum(numpy.exp(q))))
 	return(p)
 
-def vector_coeff(datafile,loglikelihood,poly_deg):
+def vector_coeff(datafile,loglikelihood,poly_deg,maxruns=50000):
 	#vc = pd.read_csv(datafile,index_col=0)
 	#N = len(vc)
 	#time = numpy.array([int(x) for x in vc.columns])
 	#vc_mat = vc.as_matrix()
 	#coeff = get_vector_sample(datafile,loglikelihood,poly_deg)
-	coeff_mean,coeff = get_vector_sample(datafile,loglikelihood,poly_deg)
+	coeff_mean,coeff = get_vector_sample(datafile,loglikelihood,poly_deg,maxruns=maxruns)
 	# coeff = numpy.polyfit(time,vc_mat[0,:],2)  # This yields a polynomial fit of 
 	#return(coeff[0,:])  # for polyfit, return coeff works fine
 	return(coeff_mean[0,:],coeff)
@@ -120,7 +118,7 @@ def fun(coeff,t):
 	val = numpy.where(vector_pop(coeff,t)>0,numpy.ma.divide(vector_out(coeff,t),vector_pop(coeff,t)),0)
 	return(val)
 
-def BloodmealTest(datafile,amean,bmean,poly_deg):
+def BloodmealTest(datafile,coeff,poly_deg):
 	import pylab
 	bm = pd.read_csv(datafile,index_col=0)
 	birdnames = pd.read_csv(datafile,index_col=0).index
@@ -128,9 +126,7 @@ def BloodmealTest(datafile,amean,bmean,poly_deg):
 	bm_mat = bm.as_matrix()
 	N = len(bm)	
 	time = numpy.array([int(x) for x in bm.columns])
-	amean = numpy.array(amean)
-	bmean = numpy.array(bmean)
-	q = amean*time+bmean
+	q = numpy.array([numpy.polyval(val,time) for val in coeff])
 	p = numpy.append(numpy.exp(q)/(1+sum(numpy.exp(q))),1/(1+sum(numpy.exp(q))))
 
 	for i in range(N):
