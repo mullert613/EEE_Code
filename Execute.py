@@ -22,7 +22,7 @@ import pickle
 
 if __name__=='__main__':
 	poly_deg = 2
-	maxruns = 100000
+	maxruns = 5000000
 	#beta1=.07
 	bm_file = "Days_BloodMeal.csv"
 	bc_file = "Days_BirdCounts.csv"

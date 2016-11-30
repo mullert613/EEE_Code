@@ -13,7 +13,7 @@ def get_bloodmeal_sample(datafile,loglikelihood,poly_deg,dof=4,pc=4,maxruns=5000
 	#bm=bm.drop("Total",axis=1)
 	N=len(bm)
 	time = numpy.array([int(x) for x in bm.columns])
-	init_guess = .5*numpy.ones((poly_deg+1)*(N-1))
+	init_guess = numpy.zeros((poly_deg+1)*(N-1))
 	loglikargs=(bm.as_matrix(),time)
 	#the_0 = MCMC.sample_dist(init_guess,pc,loglikelihood,loglikargs)
 	theta_bm,k_bm=MCMC.run_MCMC_convergence(init_guess,loglikelihood,loglikargs=(bm.as_matrix(),time),maxruns=maxruns,pc=4)
@@ -76,7 +76,12 @@ def vc_init_guess(datafile,poly_deg):
 
 def bloodmeal_function(coeff,t):  # Currently as defined works for single time value, not vector
 	q = numpy.array([numpy.polyval(val,t) for val in coeff])
-	p = numpy.append(numpy.exp(q)/(1+sum(numpy.exp(q))),1/(1+sum(numpy.exp(q))))
+	log_val = numpy.log(1+numpy.sum(numpy.exp(q),0))
+	if numpy.ndim(t) == 0:
+		logp = numpy.hstack((numpy.where(numpy.isfinite(numpy.exp(q)),q-log_val,0),-log_val))
+	else:
+		logp = numpy.row_stack((numpy.where(numpy.isfinite(numpy.exp(q)),q-log_val,0),-log_val))
+	p=numpy.exp(logp)
 	return(p)
 
 def vector_coeff(datafile,loglikelihood,poly_deg,maxruns=50000):
@@ -126,14 +131,17 @@ def BloodmealTest(datafile,coeff,poly_deg):
 	bm_mat = bm.as_matrix()
 	N = len(bm)	
 	time = numpy.array([int(x) for x in bm.columns])
-	q = numpy.array([numpy.polyval(val,time) for val in coeff])
-	p = numpy.append(numpy.exp(q)/(1+sum(numpy.exp(q))),1/(1+sum(numpy.exp(q))))
+	t = numpy.linspace(time[0],time[-1],101)
+	p = bloodmeal_function(coeff,t)
+	#p=numpy.vstack((numpy.where(numpy.isfinite(numpy.exp(q)),numpy.exp(q)/(1+numpy.sum(numpy.exp(q),0)),1),1/(1+numpy.sum(numpy.exp(q),0))))
+	#p = numpy.exp(logp)
+	#p = numpy.append(numpy.exp(q)/(1+sum(numpy.exp(q))),1/(1+sum(numpy.exp(q))))
 
 	for i in range(N):
 		pylab.subplot(3,3,i+1)
 		pylab.title('%s blood meal fit' %(birdnames[i]))
-		mat=numpy.array(bm_mat[i])
-		pylab.scatter(time,mat.astype(float))
-		pylab.plot(time,p[i,:])
+		mat=bm_mat[i].astype(float)/numpy.sum(bm_mat,0)
+		pylab.scatter(time,mat)
+		pylab.plot(t,p[i,:])
 	
 	return()

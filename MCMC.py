@@ -98,8 +98,11 @@ def bm_polynomial_loglikelihood(theta_0,counts,times):  #Proposed updated loglik
 		coeff[:,j] = theta_0[j::poly_deg+1]
 	q = numpy.array([numpy.polyval(val,times) for val in coeff])
 	#q = numpy.polyval(theta_0,times) # This is incorrect
-	logp = numpy.vstack((q-numpy.log(1+numpy.sum(numpy.exp(q),0)),-numpy.log(1+numpy.sum(numpy.exp(q),0))))
-	return numpy.sum(numpy.sum(logp*(counts)))
+	log_val = numpy.log(1+numpy.sum(numpy.exp(q),0))
+	logp = numpy.vstack((numpy.where(numpy.isfinite(numpy.exp(q)),q-log_val,0),-log_val))
+	#logp=numpy.where(numpy.isfinite(numpy.exp(q)),q-log_val,0)
+	#p=numpy.vstack((numpy.where(numpy.isfinite(numpy.exp(q)),numpy.exp(q)/(1+numpy.sum(numpy.exp(q),0)),1),1/(1+numpy.sum(numpy.exp(q),0))))
+	return numpy.sum(numpy.sum(numpy.where(counts>0,logp*(counts),0)))
 
 def gauss_log_lik(mu,sig_square,d):
 	return -numpy.sum((d-mu)**2/(2*sig_square))	
@@ -199,7 +202,8 @@ def run_MCMC_convergence(init_guess,loglik,loglikargs=(),maxruns=10000,pc = 4,**
 	accept=[ numpy.array([]) for j in range(pc)]
 	sigma= [numpy.eye(nparam) for j in range(pc)]
 	lbd  = [1/numpy.sqrt(nparam) for j in range(pc)]
-	with joblib.Parallel(n_jobs=-1) as parallel:
+	with joblib.Parallel(n_jobs=-1,temp_folder = '/fast/mullert') as parallel:
+#	with joblib.Parallel(n_jobs=-1) as parallel:	
 		counter=0
 		while counter < maxruns:
 			# for j in range(pc):

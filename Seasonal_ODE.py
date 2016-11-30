@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy
-import pylab
+#import pylab
 import unittest
 import scipy.stats
 import joblib
@@ -223,6 +223,7 @@ def get_SI_vals(Y,p):  # for the log function that doesn't calculate R
 	return(S,I,sv,iv)
 
 def eval_log_results(Y,bm_coeff_mat,bc_coeff_mat,mos_coeff,tstart,tend,bird_data_file):
+	import pylab
 	birdnames = pd.read_csv(bird_data_file,index_col=0).index
 	name_list = list(birdnames)
 	name_list.append('Vector')
@@ -261,6 +262,7 @@ def eval_log_results(Y,bm_coeff_mat,bc_coeff_mat,mos_coeff,tstart,tend,bird_data
 	return()
 
 def eval_ode_results(Y,bm_coeff_mat,bc_coeff_mat,mos_coeff,tstart,tend,bird_data_file,flag):	
+	import pylab
 	birdnames = pd.read_csv(bird_data_file,index_col=0).index
 	name_list = list(birdnames)
 	name_list.append('Vector')
