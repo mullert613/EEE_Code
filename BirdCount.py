@@ -87,7 +87,7 @@ def BirdcountTest(datafile,coeff_mat,poly_deg):
 	#bc = bc.drop("Total",axis=1)
 	bc_mat = bc.as_matrix()
 	N = len(bc)	
-	time = numpy.array([int(x) for x in bc.columns])
+	time = numpy.array([int(x) for x in bc.columns],dtype=float)
 	q = numpy.zeros((N,len(time)))
 	for j in range(0,poly_deg+1):
 		q += numpy.dot(coeff_mat[:,j,numpy.newaxis],(time**(poly_deg-j))[:,numpy.newaxis].T)

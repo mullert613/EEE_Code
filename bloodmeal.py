@@ -76,11 +76,17 @@ def vc_init_guess(datafile,poly_deg):
 
 def bloodmeal_function(coeff,t):  # Currently as defined works for single time value, not vector
 	q = numpy.array([numpy.polyval(val,t) for val in coeff])
+
+	logp = numpy.zeros(q.shape)
+	
+	for j in range(len(q)):
+		logp[j] = -numpy.log(numpy.exp(-q[j])+numpy.sum(numpy.exp(q-q[j]),axis=0))
 	log_val = numpy.log(1+numpy.sum(numpy.exp(q),0))
 	if numpy.ndim(t) == 0:
-		logp = numpy.hstack((numpy.where(numpy.isfinite(numpy.exp(q)),q-log_val,0),-log_val))
+		logp = numpy.hstack((logp,-log_val))
 	else:
-		logp = numpy.row_stack((numpy.where(numpy.isfinite(numpy.exp(q)),q-log_val,0),-log_val))
+		logp = numpy.row_stack((logp,-log_val))
+	
 	p=numpy.exp(logp)
 	return(p)
 

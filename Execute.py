@@ -21,49 +21,56 @@ import pickle
 # Instead of log transform, consider transform (1+y)
 
 if __name__=='__main__':
-	poly_deg = 2
-	maxruns = 5000000
+	poly_deg = 3
+	maxruns = 10000
 	#beta1=.07
 	bm_file = "Days_BloodMeal.csv"
 	bc_file = "Days_BirdCounts.csv"
 	msq_file = "Vector_Data.csv"
 	msq_file = "Vector_Data(NoZeros).csv"
+	bm_data = pd.read_csv(bm_file,index_col=0)
+	bm_time = numpy.array([int(x) for x in bm_data.columns])
+	bm_data = bm_data.as_matrix()
 	tstart = 90 # Setting Start Time to April 1st
 	tend = 270
 	flag = 0
+	write_flag = 1   # If set to 0 will write the results, if set to 1 will not
 	if flag==0:  # This section runs the MCMC for the various areas of interest, and stores the results
 		mos_coeff,mos_results = bloodmeal.vector_coeff(msq_file,MCMC.poly_poiss_log_lik,poly_deg,maxruns=maxruns)
 		bm_coeff_mat,bm_results = bloodmeal.get_bloodmeal_sample(bm_file,MCMC.bm_polynomial_loglikelihood,poly_deg,maxruns=maxruns)
 		bc_coeff_mat,bc_results = BirdCount.get_birdcounts_sample(bc_file,MCMC.poly_poiss_log_lik,poly_deg,maxruns=maxruns)
 		#BirdCount.BirdcountTest(bc_file,bc_coeff_mat,poly_deg)
 		bc_DIC = MCMC.get_DIC(bc_results,MCMC.poly_poiss_log_lik,bc_file)
-		#bm_DIC = MCMC.get_DIC(bm_results,MCMC.loglikelihood,bm_file)
+		bm_DIC = MCMC.DIC(bm_results,MCMC.bm_polynomial_loglikelihood,bm_data,bm_time)
 		mos_DIC = MCMC.get_DIC(mos_results,MCMC.poly_poiss_log_lik,msq_file)
 
+		if write_flag ==0:
+			with open('Mos_coeff_poly_deg(%d).pkl' %poly_deg, 'wb') as output:
+				pickle.dump(mos_coeff,output)
 
-		with open('Mos_coeff_poly_deg(%d).pkl' %poly_deg, 'wb') as output:
-			pickle.dump(mos_coeff,output)
+			with open('bloodmeal_coeff_poly_deg(%d).pkl' %poly_deg, 'wb') as output:
+				pickle.dump(bm_coeff_mat,output)
 
-		with open('bloodmeal_coeff_poly_deg(%d).pkl' %poly_deg, 'wb') as output:
-			pickle.dump(bm_coeff_mat,output)
+			with open('host_coeff_poly_deg(%d).pkl' %poly_deg, 'wb') as output:
+				pickle.dump(bc_coeff_mat,output)
 
-		with open('host_coeff_poly_deg(%d).pkl' %poly_deg, 'wb') as output:
-			pickle.dump(bc_coeff_mat,output)
+			with open('host_coeff_poly_deg(%d)_full_results.pkl' %poly_deg, 'wb') as output:
+				pickle.dump(bc_results,output)	
 
-		with open('host_coeff_poly_deg(%d)_full_results.pkl' %poly_deg, 'wb') as output:
-			pickle.dump(bc_results,output)	
+			with open('bloodmeal_coeff_poly_deg(%d)_full_results.pkl' %poly_deg, 'wb') as output:
+				pickle.dump(bm_results,output)	
+			
+			with open('Mos_coeff_poly_deg(%d)_full_results.pkl' %poly_deg, 'wb') as output:
+				pickle.dump(mos_results,output)	
 
-		with open('bloodmeal_coeff_poly_deg(%d)_full_results.pkl' %poly_deg, 'wb') as output:
-			pickle.dump(bm_results,output)	
-		
-		with open('Mos_coeff_poly_deg(%d)_full_results.pkl' %poly_deg, 'wb') as output:
-			pickle.dump(mos_results,output)	
+			with open('Mos_coeff_poly_deg(%d)_DIC.pkl' %poly_deg, 'wb') as output:
+				pickle.dump(mos_DIC,output)			
 
-		with open('Mos_coeff_poly_deg(%d)_DIC.pkl' %poly_deg, 'wb') as output:
-			pickle.dump(mos_DIC,output)			
+			with open('host_coeff_poly_deg(%d)_DIC.pkl' %poly_deg, 'wb') as output:
+				pickle.dump(bc_DIC,output)	
 
-		with open('host_coeff_poly_deg(%d)_DIC.pkl' %poly_deg, 'wb') as output:
-			pickle.dump(bc_DIC,output)	
+		#with open('bloodmeal_coeff_poly_deg(%d)_DIC.pkl' %poly_deg, 'wb') as output:
+		#	pickle.dump(bm_DIC,output)	
 
 	elif flag==1:  #This section calls the stored data to be used in running the ODE
 		import pylab
@@ -92,7 +99,7 @@ if __name__=='__main__':
 			Seasonal_ODE.eval_log_results(Y,bm_coeff_mat,bc_coeff_mat,mos_coeff,tstart,tend,bc_file)
 		else:
 			Seasonal_ODE.eval_ode_results(Y,bm_coeff_mat,bc_coeff_mat,mos_coeff,tstart,tend,bc_file,ODE_flag)
-		pylab.show()
+		pylab.show()	
 
 	elif flag==2:  #Statistical Comparison of the Different Poly Degrees, run based off optimal DIC
 		import pylab

@@ -107,6 +107,17 @@ def bm_polynomial_loglikelihood(theta_0,counts,times):  #Proposed updated loglik
 def gauss_log_lik(mu,sig_square,d):
 	return -numpy.sum((d-mu)**2/(2*sig_square))	
 
+def make_PSD(sigma):
+	eigvals,eigvect = numpy.linalg.eigh(sigma)
+	if numpy.all(eigvals>=0):
+		return(sigma)
+	else:
+		eigvals = numpy.where(eigvals>=0,eigvals,0)
+		return(numpy.dot(numpy.dot(eigvect,numpy.diag(eigvals)),eigvect.T))
+
+
+
+
 def NewMCMC(theta_0,sigma,lbd,runs,loglikelihood,loglikargs=()):
     #args will be a list of stored additional parameters, if a keyword is provided will appear in kwargs dictionary
 	k=0
@@ -115,9 +126,10 @@ def NewMCMC(theta_0,sigma,lbd,runs,loglikelihood,loglikargs=()):
 	theta[0]=theta_0
 	loglike_0 = loglikelihood(theta_0,*loglikargs)
 	for i in range(0,runs):
-		theta_1=numpy.random.multivariate_normal(theta_0,sigma*lbd**2)
+		theta_1=numpy.random.multivariate_normal(theta_0,make_PSD(sigma*lbd**2))
 		loglike_1 = loglikelihood(theta_1,*loglikargs)
-		alpha = numpy.exp(numpy.min((0.,loglike_1-loglike_0)))
+#		alpha = numpy.exp(numpy.min((0.,loglike_1-loglike_0)))
+		alpha = numpy.exp(numpy.min((0.,numpy.where(loglike_1==loglike_0,-numpy.inf,loglike_1-loglike_0))))
 		accept = numpy.random.binomial(1,alpha)
 		if accept==1:
 			k+=1
@@ -177,12 +189,11 @@ def sample_dist(theta_0,pc,loglike,loglikargs=(),dof=4,method = 'BFGS'):  # Calc
 
 
 
-def convergence_update(theta,sigma,accept,lbd,upd,counter,p,loglikelihood,loglikargs=()):
-	nparam = numpy.shape(theta)[-1]
-	value,k = NewMCMC(theta[-1],sigma,lbd,upd,loglikelihood,loglikargs)
-	theta = numpy.vstack(( theta[1:] , value ))
-	sigma_star = numpy.cov(value.T)
-	sigma = p*sigma + (1-p)*sigma_star
+def convergence_update(theta_init,sigma,accept,lbd,upd,counter,p,loglikelihood,loglikargs=()):
+	nparam = numpy.shape(theta_init)
+	theta,k = NewMCMC(theta_init,sigma,lbd,upd,loglikelihood,loglikargs)
+	sigma_star = numpy.cov(theta.T)
+	sigma = make_PSD(p*sigma + (1-p)*sigma_star)
 	accept = numpy.append(accept,numpy.float(k)/upd)
 	if nparam>1:
 		alpha = .23
@@ -190,7 +201,7 @@ def convergence_update(theta,sigma,accept,lbd,upd,counter,p,loglikelihood,loglik
 		alpha = .44
 	#lbd *= numpy.exp((accept[-1]-alpha)/1)		#This line is different than the paper
 	lbd *= numpy.exp((accept[-1]-alpha)/(numpy.float(counter)/upd+1))		# Original Line
-	return(theta,sigma,accept,lbd)	
+	return(theta[1:],sigma,accept,lbd)	
 	
 def run_MCMC_convergence(init_guess,loglik,loglikargs=(),maxruns=10000,pc = 4,**kargs):   # kargs include dof
 	the_0 = sample_dist(init_guess,pc,loglik,loglikargs = loglikargs,**kargs)
@@ -202,17 +213,19 @@ def run_MCMC_convergence(init_guess,loglik,loglikargs=(),maxruns=10000,pc = 4,**
 	accept=[ numpy.array([]) for j in range(pc)]
 	sigma= [numpy.eye(nparam) for j in range(pc)]
 	lbd  = [1/numpy.sqrt(nparam) for j in range(pc)]
-	with joblib.Parallel(n_jobs=-1,temp_folder = '/fast/mullert') as parallel:
-#	with joblib.Parallel(n_jobs=-1) as parallel:	
+#	with joblib.Parallel(n_jobs=-1,temp_folder = '/fast/mullert') as parallel:
+	with joblib.Parallel(n_jobs=-1) as parallel:	
 		counter=0
 		while counter < maxruns:
 			# for j in range(pc):
 			# 	theta[j],sigma[j],accept[j],lbd[j] = convergence_update(theta[j],sigma[j],accept[j],lbd[j],upd,counter,p,loglik,loglikargs)
 			output = parallel(
-					joblib.delayed(convergence_update)(theta[j],sigma[j],accept[j],lbd[j],upd,counter,p,loglik,loglikargs)
+					joblib.delayed(convergence_update)(theta[j][-1],sigma[j],accept[j],lbd[j],upd,counter,p,loglik,loglikargs)
 					for j in range(pc))
 			counter += upd
-			theta,sigma,accept,lbd = zip(*output)
+			theta_upd,sigma,accept,lbd = zip(*output)
+			for k in range(pc):
+				theta[k] = numpy.vstack((theta[k],theta_upd[k]))
 			R_hat = Gelman_Rubin_test(theta)
 			#print R_hat	
 			#print accept
