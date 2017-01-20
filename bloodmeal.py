@@ -7,19 +7,21 @@ import joblib
 import MCMC
 import BirdCount
 import Seasonal_ODE
+import warnings
+
 # Changes Made Here, finish this
 def get_bloodmeal_sample(datafile,loglikelihood,poly_deg,dof=4,pc=4,maxruns=50000):
 	bm = pd.read_csv(datafile,index_col=0)
 	#bm=bm.drop("Total",axis=1)
 	N=len(bm)
-	time = numpy.array([int(x) for x in bm.columns])
+	time = numpy.array([int(x) for x in bm.columns],dtype=float)
 	init_guess = numpy.zeros((poly_deg+1)*(N-1))
 	loglikargs=(bm.as_matrix(),time)
 	#the_0 = MCMC.sample_dist(init_guess,pc,loglikelihood,loglikargs)
 	theta_bm,k_bm=MCMC.run_MCMC_convergence(init_guess,loglikelihood,loglikargs=(bm.as_matrix(),time),maxruns=maxruns,pc=4)
 
 	n=len(bm.as_matrix())
-	results = theta_bm[0][500::100]
+	results = theta_bm[0][500::10]
 	coeff_mean = numpy.zeros((N-1,poly_deg+1))
 	for j in range(poly_deg+1):
 		coeff_mean[:,j] = numpy.mean(results[:,j::poly_deg+1],axis=0)
@@ -39,7 +41,7 @@ def get_vector_sample(datafile,loglikelihood,poly_deg,dof=4,pc=4,maxruns=50000):
 	N = len(vc)
 	lbd = 10./numpy.sqrt((poly_deg+1)*(N))
 	sigma= numpy.eye((poly_deg+1)*N)
-	time = numpy.array([int(x) for x in vc.columns])
+	time = numpy.array([int(x) for x in vc.columns],dtype=float)
 	vc_mat = vc.as_matrix()
 	dof=4
 	pc=4
@@ -54,7 +56,7 @@ def get_vector_sample(datafile,loglikelihood,poly_deg,dof=4,pc=4,maxruns=50000):
 		loglikargs = (vc_mat[i],time)
 		theta_vc,k_vc=MCMC.run_MCMC_convergence(init_guess[i,:],loglikelihood,loglikargs,maxruns=maxruns,pc=4,method="Nelder-Mead")
 		n=len(vc_mat[i])
-		results = theta_vc[0][500::100]
+		results = theta_vc[0][500::10]
 		#coeff = numpy.zeros((len(results),poly_deg+1))
 		coeff.append(numpy.zeros((len(results),poly_deg+1)))
 		for j in range(poly_deg+1):
@@ -68,7 +70,7 @@ def vc_init_guess(datafile,poly_deg):
 	vc = pd.read_csv(datafile,index_col=0)
 	#bc = bc.drop("Total",axis=1)
 	N = len(vc)
-	time = numpy.array([int(x) for x in vc.columns])
+	time = numpy.array([int(x) for x in vc.columns],dtype=float)
 	A = numpy.column_stack([time**n for n in reversed(range(poly_deg+1))]) 
 	b = numpy.log(vc.as_matrix()+.01)
 	x = numpy.linalg.lstsq(A,b.T)
@@ -93,7 +95,7 @@ def bloodmeal_function(coeff,t):  # Currently as defined works for single time v
 def vector_coeff(datafile,loglikelihood,poly_deg,maxruns=50000):
 	#vc = pd.read_csv(datafile,index_col=0)
 	#N = len(vc)
-	#time = numpy.array([int(x) for x in vc.columns])
+	#time = numpy.array([int(x) for x in vc.columns],dtype=float)
 	#vc_mat = vc.as_matrix()
 	#coeff = get_vector_sample(datafile,loglikelihood,poly_deg)
 	coeff_mean,coeff = get_vector_sample(datafile,loglikelihood,poly_deg,maxruns=maxruns)
@@ -136,7 +138,7 @@ def BloodmealTest(datafile,coeff,poly_deg):
 	#bc = bc.drop("Total",axis=1)
 	bm_mat = bm.as_matrix()
 	N = len(bm)	
-	time = numpy.array([int(x) for x in bm.columns])
+	time = numpy.array([int(x) for x in bm.columns],dtype=float)
 	t = numpy.linspace(time[0],time[-1],101)
 	p = bloodmeal_function(coeff,t)
 	#p=numpy.vstack((numpy.where(numpy.isfinite(numpy.exp(q)),numpy.exp(q)/(1+numpy.sum(numpy.exp(q),0)),1),1/(1+numpy.sum(numpy.exp(q),0))))
@@ -150,4 +152,16 @@ def BloodmealTest(datafile,coeff,poly_deg):
 		pylab.scatter(time,mat)
 		pylab.plot(t,p[i,:])
 	
+	return()
+
+def MosquitoTest(datafile,coeff,poly_deg):
+	import pylab
+	vc = pd.read_csv(datafile,index_col=0)
+	vc_mat = vc.as_matrix()
+	time = numpy.array([int(x) for x in vc.columns],dtype=float)
+	t = numpy.linspace(time[0],time[-1],101)
+	p = vector_pop(coeff,t)
+	pylab.title('Vector Fit')
+	pylab.scatter(time,vc_mat)
+	pylab.plot(t,p)
 	return()

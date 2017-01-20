@@ -6,6 +6,7 @@ import unittest
 import scipy.stats
 import joblib
 import MCMC
+import warnings
 
 def get_birdcounts_sample(datafile,loglikelihood,poly_deg,dof=4,pc=4,maxruns=50000):
 	bc = pd.read_csv(datafile,index_col=0)
@@ -13,7 +14,7 @@ def get_birdcounts_sample(datafile,loglikelihood,poly_deg,dof=4,pc=4,maxruns=500
 	N = len(bc)
 	lbd = 10./numpy.sqrt((poly_deg+1)*(N))
 	sigma= numpy.eye((poly_deg+1)*N)
-	time = numpy.array([int(x) for x in bc.columns])
+	time = numpy.array([int(x) for x in bc.columns],dtype=float)
 	bc_mat = bc.as_matrix()
 	dof=4
 	pc=4
@@ -27,7 +28,7 @@ def get_birdcounts_sample(datafile,loglikelihood,poly_deg,dof=4,pc=4,maxruns=500
 		loglikargs = (bc_mat[i],time)
 		theta_bc,k_bc=MCMC.run_MCMC_convergence(init_guess[i,:],loglikelihood,loglikargs,maxruns=maxruns,pc=4,method="Nelder-Mead")
 		n=len(bc_mat[i])
-		results = theta_bc[0][500::100]
+		results = theta_bc[0][500::10]
 		#coeff = numpy.zeros((len(results),poly_deg+1))
 		coeff.append(numpy.zeros((len(results),poly_deg+1)))
 		for j in range(poly_deg+1):
@@ -46,7 +47,7 @@ def bc_init_guess(datafile,poly_deg):
 	bc = pd.read_csv(datafile,index_col=0)
 	#bc = bc.drop("Total",axis=1)
 	N = len(bc)
-	time = numpy.array([int(x) for x in bc.columns])
+	time = numpy.array([int(x) for x in bc.columns],dtype=float)
 	A = numpy.column_stack([time**n for n in reversed(range(poly_deg+1))]) 
 	b = numpy.log(bc.as_matrix()+.01)
 	x = numpy.linalg.lstsq(A,b.T)

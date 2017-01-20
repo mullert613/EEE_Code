@@ -3,6 +3,7 @@ import numpy
 import unittest
 import scipy.stats
 import joblib
+import warnings
 
 # 
 def example():   # Simple run,sigma,lbd,theta_0 values to be used in test code
@@ -14,7 +15,7 @@ def example():   # Simple run,sigma,lbd,theta_0 values to be used in test code
 
 def get_DIC(results,loglikelihood,datafile):
 	data = pd.read_csv(datafile,index_col=0)
-	time = numpy.array([int(x) for x in data.columns])
+	time = numpy.array([int(x) for x in data.columns],dtype=float)
 	data_mat = data.as_matrix()
 	p = len(results)
 	DIC_vals=numpy.zeros(p)
@@ -63,7 +64,9 @@ def lin_poiss_log_lik(theta_0,data,times):
 
 def poly_poiss_log_lik(theta_0,data,times):
 	q = numpy.polyval(theta_0,times)
-	logp = numpy.sum(data*q - numpy.exp(q))
+	with warnings.catch_warnings():
+		warnings.simplefilter("ignore")
+		logp = numpy.sum(data*q - numpy.exp(q))
 	return logp
 
 def quad_test(theta_0,data,times):
@@ -96,13 +99,21 @@ def bm_polynomial_loglikelihood(theta_0,counts,times):  #Proposed updated loglik
 	coeff = numpy.zeros((param_count,poly_deg+1))
 	for j in range(poly_deg+1):
 		coeff[:,j] = theta_0[j::poly_deg+1]
+
 	q = numpy.array([numpy.polyval(val,times) for val in coeff])
-	#q = numpy.polyval(theta_0,times) # This is incorrect
-	log_val = numpy.log(1+numpy.sum(numpy.exp(q),0))
-	logp = numpy.vstack((numpy.where(numpy.isfinite(numpy.exp(q)),q-log_val,0),-log_val))
-	#logp=numpy.where(numpy.isfinite(numpy.exp(q)),q-log_val,0)
-	#p=numpy.vstack((numpy.where(numpy.isfinite(numpy.exp(q)),numpy.exp(q)/(1+numpy.sum(numpy.exp(q),0)),1),1/(1+numpy.sum(numpy.exp(q),0))))
-	return numpy.sum(numpy.sum(numpy.where(counts>0,logp*(counts),0)))
+	
+	logp = numpy.zeros(q.shape)
+	with warnings.catch_warnings():
+		warnings.simplefilter("ignore")
+		for j in range(len(q)):
+			logp[j] = -numpy.log(numpy.exp(-q[j])+numpy.sum(numpy.exp(q-q[j]),axis=0))
+		log_val = numpy.log(1+numpy.sum(numpy.exp(q),0))
+		if numpy.ndim(times) == 0:
+			logp = numpy.hstack((logp,-log_val))
+		else:
+			logp = numpy.row_stack((logp,-log_val))
+
+		return numpy.sum(numpy.sum(numpy.where(counts>0,logp*(counts),0)))
 
 def gauss_log_lik(mu,sig_square,d):
 	return -numpy.sum((d-mu)**2/(2*sig_square))	
@@ -115,9 +126,6 @@ def make_PSD(sigma):
 		eigvals = numpy.where(eigvals>=0,eigvals,0)
 		return(numpy.dot(numpy.dot(eigvect,numpy.diag(eigvals)),eigvect.T))
 
-
-
-
 def NewMCMC(theta_0,sigma,lbd,runs,loglikelihood,loglikargs=()):
     #args will be a list of stored additional parameters, if a keyword is provided will appear in kwargs dictionary
 	k=0
@@ -129,7 +137,9 @@ def NewMCMC(theta_0,sigma,lbd,runs,loglikelihood,loglikargs=()):
 		theta_1=numpy.random.multivariate_normal(theta_0,make_PSD(sigma*lbd**2))
 		loglike_1 = loglikelihood(theta_1,*loglikargs)
 #		alpha = numpy.exp(numpy.min((0.,loglike_1-loglike_0)))
-		alpha = numpy.exp(numpy.min((0.,numpy.where(loglike_1==loglike_0,-numpy.inf,loglike_1-loglike_0))))
+		with warnings.catch_warnings():
+			warnings.simplefilter("ignore")
+			alpha = numpy.exp(numpy.min((0.,numpy.where(loglike_1==loglike_0,-numpy.inf,loglike_1-loglike_0))))
 		accept = numpy.random.binomial(1,alpha)
 		if accept==1:
 			k+=1
@@ -162,11 +172,13 @@ def matrix_sqrt(A):		# Assumes a square matrix A, include a check for positive d
 
 def sample_dist(theta_0,pc,loglike,loglikargs=(),dof=4,method = 'BFGS'):  # Calculate a sample distribution from student t tests from the mode 
 														  # for a number of parallel chains
-	
+	print('running MLE')
 	def flog(x,loglike,*args):
 		return -loglike(x,*args)
-
-	val = scipy.optimize.minimize(flog,theta_0,args=(loglike,)+loglikargs,method = method)
+	with warnings.catch_warnings():
+		warnings.simplefilter("ignore")	
+		val = scipy.optimize.minimize(flog,theta_0,args=(loglike,)+loglikargs,method = method)
+	print('finished MLE')
 	theta_0_par = val.x
 	time = loglikargs[1]
 	q = numpy.polyval(theta_0_par,time)
@@ -229,7 +241,7 @@ def run_MCMC_convergence(init_guess,loglik,loglikargs=(),maxruns=10000,pc = 4,**
 			R_hat = Gelman_Rubin_test(theta)
 			#print R_hat	
 			#print accept
-			if numpy.all(R_hat<1.10):
+			if numpy.all(R_hat<1.10) and (counter>=9500):
 				break
 		else:
 			print("Convergence not reached")	
