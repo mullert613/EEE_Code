@@ -21,7 +21,7 @@ def get_bloodmeal_sample(datafile,loglikelihood,poly_deg,dof=4,pc=4,maxruns=5000
 	theta_bm,k_bm=MCMC.run_MCMC_convergence(init_guess,loglikelihood,loglikargs=(bm.as_matrix(),time),maxruns=maxruns,pc=4)
 
 	n=len(bm.as_matrix())
-	results = theta_bm[0][500::10]
+	results = theta_bm[0][::10]
 	coeff_mean = numpy.zeros((N-1,poly_deg+1))
 	for j in range(poly_deg+1):
 		coeff_mean[:,j] = numpy.mean(results[:,j::poly_deg+1],axis=0)
@@ -56,7 +56,7 @@ def get_vector_sample(datafile,loglikelihood,poly_deg,dof=4,pc=4,maxruns=50000):
 		loglikargs = (vc_mat[i],time)
 		theta_vc,k_vc=MCMC.run_MCMC_convergence(init_guess[i,:],loglikelihood,loglikargs,maxruns=maxruns,pc=4,method="Nelder-Mead")
 		n=len(vc_mat[i])
-		results = theta_vc[0][500::10]
+		results = theta_vc[0][::10]
 		#coeff = numpy.zeros((len(results),poly_deg+1))
 		coeff.append(numpy.zeros((len(results),poly_deg+1)))
 		for j in range(poly_deg+1):

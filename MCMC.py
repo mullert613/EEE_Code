@@ -242,10 +242,18 @@ def run_MCMC_convergence(init_guess,loglik,loglikargs=(),maxruns=10000,pc = 4,**
 			#print R_hat	
 			#print accept
 			if numpy.all(R_hat<1.10) and (counter>=9500):
+				output = parallel(
+					joblib.delayed(NewMCMC)(theta[j][-1],sigma[j],lbd[j],10000,loglik,loglikargs)
+					for j in range(pc))
+				theta_final,k = zip(*output)
 				break
+			if counter%10000==0:
+				print counter
+				print numpy.mean([x[-20:] for x in accept],axis=1)
 		else:
-			print("Convergence not reached")	
-	return(theta,accept)	
+			print("Convergence not reached")
+			theta_final = theta	
+	return(theta_final,accept)	
 
 
 def MCMC_output_calculator(theta,counts,time):

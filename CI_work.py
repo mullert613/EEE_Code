@@ -89,12 +89,12 @@ def build_bc_mat(results,index,poly_deg):
 
 
 nsamples = 100  # This is the number of data points to be run, optimally 1000, until we have the newly parsed data, use 100
-mos_val = floor(len(mos_results[0])/nsamples)
-bm_val = floor(len(bm_results)/nsamples)
+mos_val = int(floor(len(mos_results[0])/nsamples))
+bm_val = int(floor(len(bm_results)/nsamples))
 bc_val_holder = numpy.zeros(7)
 for j in range(7):
 	bc_val_holder[j] = floor(len(bc_results[j])/nsamples)
-bc_val = numpy.min(bc_val_holder)
+bc_val = int(numpy.min(bc_val_holder))
 beta1_vals = numpy.zeros(nsamples)
 ODE_results = numpy.zeros((nsamples,1001,23))
 for j in range(nsamples):
@@ -103,3 +103,26 @@ for j in range(nsamples):
 	mos_array = mos_results[0][mos_val*j]
 	beta1_vals[j] = get_beta1(bm_array,bc_array,mos_array)
 	ODE_results[j] = Seasonal_ODE.run_ode(beta1_vals[j],rhs_func,bm_array,bc_array,mos_array,tstart,tend,ODE_flag)
+
+with open('beta1_(%d)_samplevals_deg2.pkl' %nsamples, 'wb') as output:
+	pickle.dump(beta1_vals,output)	
+
+with open('ODE_Results_(%d)_samplevals_deg2.pkl' %nsamples, 'wb') as output:
+	pickle.dump(ODE_Results,output)	
+
+beta1_vals=pickle.load(open('beta1_(%d)_samplevals_deg2.pkl' %nsamples,'rb'))
+ODE_results=pickle.load(open('ODE_Results_(%d)_samplevals_deg2.pkl' %nsamples,'rb'))
+
+for j in range(nsamples):
+	bm_array = numpy.reshape(numpy.array(bm_results[bm_val*j]),(6,poly_deg+1))
+	bc_array = build_bc_mat(bc_results,bc_val*j,poly_deg)
+	mos_array = mos_results[0][mos_val*j]
+	Seasonal_ODE.eval_ode_results(ODE_results[j],bm_array,bc_array,mos_array,tstart,tend,bc_file,1,alpha=0.3)
+
+#At each time, calculate confidence intervals for each species, and plot them each by time	
+numpy.percentile(ODE_results,[50,2.5,97.5],axis=0).shape
+
+#Clean up the code to make them usable
+#Start to think about the intro
+#Read up on dilution effect, and the 
+#Fix lambda and sigma after conversion, then run MCMC without updating these for how many samples you want

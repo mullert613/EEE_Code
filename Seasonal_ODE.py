@@ -261,7 +261,7 @@ def eval_log_results(Y,bm_coeff_mat,bc_coeff_mat,mos_coeff,tstart,tend,bird_data
 	pylab.title("Feeding Index Values")
 	return()
 
-def eval_ode_results(Y,bm_coeff_mat,bc_coeff_mat,mos_coeff,tstart,tend,bird_data_file,flag):	
+def eval_ode_results(Y,bm_coeff_mat,bc_coeff_mat,mos_coeff,tstart,tend,bird_data_file,flag,alpha=1):	
 	import pylab
 	birdnames = pd.read_csv(bird_data_file,index_col=0).index
 	name_list = list(birdnames)
@@ -284,7 +284,7 @@ def eval_ode_results(Y,bm_coeff_mat,bc_coeff_mat,mos_coeff,tstart,tend,bird_data
 		#if k==p:
 		#	pylab.plot(T,mos_pop,sym[k])
 		#else:
-		pylab.plot(T,bc[k],sym[k])
+		pylab.plot(T,bc[k],sym[k],alpha=alpha)
 	pylab.title("Populations")
 	pylab.legend(name_list)
 	N=s+i+r
@@ -297,12 +297,12 @@ def eval_ode_results(Y,bm_coeff_mat,bc_coeff_mat,mos_coeff,tstart,tend,bird_data
 			temp=i[:,k]
 		elif flag==2:
 			temp=numpy.exp(i[:,k])
-		pylab.plot(T,temp,sym[k])	
+		pylab.plot(T,temp,sym[k],alpha=alpha)	
 	pylab.legend(birdnames)
 	pylab.title("Infected Birds")
 	pylab.figure(3)
 	for k in range(p):
-		pylab.plot(T,alpha_val[k])
+		pylab.plot(T,alpha_val[k],alpha=alpha)
 	pylab.legend(birdnames)
 	pylab.title("Feeding Index Values")
 	return()

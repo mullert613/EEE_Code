@@ -28,7 +28,7 @@ def get_birdcounts_sample(datafile,loglikelihood,poly_deg,dof=4,pc=4,maxruns=500
 		loglikargs = (bc_mat[i],time)
 		theta_bc,k_bc=MCMC.run_MCMC_convergence(init_guess[i,:],loglikelihood,loglikargs,maxruns=maxruns,pc=4,method="Nelder-Mead")
 		n=len(bc_mat[i])
-		results = theta_bc[0][500::10]
+		results = theta_bc[0][::10]
 		#coeff = numpy.zeros((len(results),poly_deg+1))
 		coeff.append(numpy.zeros((len(results),poly_deg+1)))
 		for j in range(poly_deg+1):
