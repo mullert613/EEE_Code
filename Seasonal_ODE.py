@@ -9,6 +9,12 @@ import MCMC
 import bloodmeal
 
 
+def time_transform(t):
+	return (2./365*t-1)
+
+def inv_time_transform(t):
+	return (365./2*(t+1))
+
 def alpha_calc(bm,counts):   #Seems to work appropriately for a bloodmeal value of 0, errors occur with counts of 0 (which may be ok)
 	n = len(counts)
 	counts = numpy.array(counts)

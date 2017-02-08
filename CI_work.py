@@ -1,3 +1,4 @@
+
 import sys
 import pandas as pd
 import numpy
@@ -21,15 +22,15 @@ bm_data = bm_data.as_matrix()
 tstart = 90 # Setting Start Time to April 1st
 tend = 270
 
-poly_deg = 2
+poly_deg = [4,2,4]
 flag = 0
 
-bm_coeff_mat =pickle.load(open('bloodmeal_coeff_poly_deg(%d).pkl' %poly_deg,'rb'))
-mos_coeff = pickle.load(open('Mos_coeff_poly_deg(%d).pkl' %poly_deg, 'rb'))
-bc_coeff_mat = pickle.load(open('host_coeff_poly_deg(%d).pkl' %poly_deg,'rb'))
-mos_results = pickle.load(open('Mos_coeff_poly_deg(%d)_full_results.pkl' %poly_deg,'rb'))
-bm_results = pickle.load(open('bloodmeal_coeff_poly_deg(%d)_full_results.pkl' %poly_deg,'rb'))
-bc_results = pickle.load(open('host_coeff_poly_deg(%d)_full_results.pkl' %poly_deg,'rb'))
+bm_coeff_mat =pickle.load(open('bloodmeal_coeff_poly_deg(%d).pkl' %poly_deg[1],'rb'))
+mos_coeff = pickle.load(open('Mos_coeff_poly_deg(%d).pkl' %poly_deg[2], 'rb'))
+bc_coeff_mat = pickle.load(open('host_coeff_poly_deg(%d).pkl' %poly_deg[0],'rb'))
+mos_results = pickle.load(open('Mos_coeff_poly_deg(%d)_full_results.pkl' %poly_deg[2],'rb'))
+bm_results = pickle.load(open('bloodmeal_coeff_poly_deg(%d)_full_results.pkl' %poly_deg[1],'rb'))
+bc_results = pickle.load(open('host_coeff_poly_deg(%d)_full_results.pkl' %poly_deg[0],'rb'))
 
 #inputting bm_results works as written, need to input mos_results[0], similarly bc_results[j]
 def get_ci(results,poly_deg):
@@ -76,8 +77,8 @@ def get_beta1(bm_coeff_mat,bc_coeff_mat,mos_coeff):
 rhs_func = Seasonal_ODE.test_rhs
 ODE_flag = 1			#ODE_flag, use 0 is the ODE is using counts, 1 if the ODE is using proportions, 2 if log proportions
 beta_flag = 0  # Set = 0 to run the beta optimization, otherwise will use a stored value of beta
-beta1 = get_beta1(bm_coeff_mat,bc_coeff_mat,mos_coeff)
-beta1_ci=((get_beta1(bm_ci[0],bc_ci[0],mos_ci[0].squeeze()),get_beta1(bm_ci[1],bc_ci[1],mos_ci[1].squeeze())))
+#beta1 = get_beta1(bm_coeff_mat,bc_coeff_mat,mos_coeff)
+#beta1_ci=((get_beta1(bm_ci[0],bc_ci[0],mos_ci[0].squeeze()),get_beta1(bm_ci[1],bc_ci[1],mos_ci[1].squeeze())))
 
 
 def build_bc_mat(results,index,poly_deg):
@@ -88,18 +89,22 @@ def build_bc_mat(results,index,poly_deg):
 
 
 
-nsamples = 100  # This is the number of data points to be run, optimally 1000, until we have the newly parsed data, use 100
-mos_val = int(floor(len(mos_results[0])/nsamples))
-bm_val = int(floor(len(bm_results)/nsamples))
-bc_val_holder = numpy.zeros(7)
-for j in range(7):
-	bc_val_holder[j] = floor(len(bc_results[j])/nsamples)
-bc_val = int(numpy.min(bc_val_holder))
+nsamples = 1000  # This is the number of data points to be run, optimally 1000, until we have the newly parsed data, use 100
+mos_val=1
+bm_val=1
+#mos_val = int(numpy.floor(len(mos_results[0])/nsamples))
+#bm_val = int(numpy.floor(len(bm_results)/nsamples))
+#bc_val_holder = numpy.zeros(7)
+#for j in range(7):
+#	bc_val_holder[j] = numpy.floor(len(bc_results[j])/nsamples)
+#bc_val = int(numpy.min(bc_val_holder))
+bc_val=1
 beta1_vals = numpy.zeros(nsamples)
 ODE_results = numpy.zeros((nsamples,1001,23))
-for j in range(nsamples):
-	bm_array = numpy.reshape(numpy.array(bm_results[bm_val*j]),(6,poly_deg+1))
-	bc_array = build_bc_mat(bc_results,bc_val*j,poly_deg)
+poly_deg = [4,2,4]
+for j in range(1000):
+	bm_array = numpy.reshape(numpy.array(bm_results[bm_val*j]),(6,poly_deg[1]+1))
+	bc_array = build_bc_mat(bc_results,bc_val*j,poly_deg[0])
 	mos_array = mos_results[0][mos_val*j]
 	beta1_vals[j] = get_beta1(bm_array,bc_array,mos_array)
 	ODE_results[j] = Seasonal_ODE.run_ode(beta1_vals[j],rhs_func,bm_array,bc_array,mos_array,tstart,tend,ODE_flag)
@@ -108,19 +113,24 @@ with open('beta1_(%d)_samplevals_deg2.pkl' %nsamples, 'wb') as output:
 	pickle.dump(beta1_vals,output)	
 
 with open('ODE_Results_(%d)_samplevals_deg2.pkl' %nsamples, 'wb') as output:
-	pickle.dump(ODE_Results,output)	
+	pickle.dump(ODE_results,output)	
 
-beta1_vals=pickle.load(open('beta1_(%d)_samplevals_deg2.pkl' %nsamples,'rb'))
-ODE_results=pickle.load(open('ODE_Results_(%d)_samplevals_deg2.pkl' %nsamples,'rb'))
-
-for j in range(nsamples):
-	bm_array = numpy.reshape(numpy.array(bm_results[bm_val*j]),(6,poly_deg+1))
-	bc_array = build_bc_mat(bc_results,bc_val*j,poly_deg)
-	mos_array = mos_results[0][mos_val*j]
-	Seasonal_ODE.eval_ode_results(ODE_results[j],bm_array,bc_array,mos_array,tstart,tend,bc_file,1,alpha=0.3)
+#beta1_vals=pickle.load(open('beta1_(%d)_samplevals_deg2.pkl' %nsamples,'rb'))
+#ODE_results=pickle.load(open('ODE_Results_(%d)_samplevals_deg2.pkl' %nsamples,'rb'))
+#for j in range(nsamples):
+#	print j
+#	bm_array = numpy.reshape(numpy.array(bm_results[bm_val*j]),(6,poly_deg+1))
+#	bc_array = build_bc_mat(bc_results,bc_val*j,poly_deg)
+#	mos_array = mos_results[0][mos_val*j]
+#	Seasonal_ODE.eval_ode_results(ODE_results[j]
+#		,bm_array,bc_array,mos_array,tstart,tend,bc_file,1,alpha=0.3)
 
 #At each time, calculate confidence intervals for each species, and plot them each by time	
-numpy.percentile(ODE_results,[50,2.5,97.5],axis=0).shape
+val=numpy.percentile(ODE_results,[50,2.5,97.5],axis=0)
+
+for j in range(3):
+	Seasonal_ODE.eval_ode_results(val[j],bm_coeff_mat,bc_coeff_mat,mos_coeff,tstart,tend,bc_file,ODE_flag)
+
 
 #Clean up the code to make them usable
 #Start to think about the intro

@@ -180,6 +180,7 @@ def sample_dist(theta_0,pc,loglike,loglikargs=(),dof=4,method = 'BFGS'):  # Calc
 		val = scipy.optimize.minimize(flog,theta_0,args=(loglike,)+loglikargs,method = method)
 	print('finished MLE')
 	theta_0_par = val.x
+	print("MLE initial",flog(theta_0_par,loglike,*loglikargs))
 	time = loglikargs[1]
 	q = numpy.polyval(theta_0_par,time)
 	p = numpy.exp(q)
@@ -192,11 +193,19 @@ def sample_dist(theta_0,pc,loglike,loglikargs=(),dof=4,method = 'BFGS'):  # Calc
 			for j in range(0,poly_deg+1):
 				hessian[i][j] = numpy.sum(time**(2*poly_deg-(i+j))*p)
 		hess_inv = numpy.linalg.inv(hessian)		
-
+	# If the above formula is correct, if you get all -inf, we want to resample until at least one is finite
+	# Multiply A by .5 each time until one of these is finite.
+	val = numpy.inf
+	count = 0
 	A = matrix_sqrt(hess_inv)
 	t = scipy.stats.t(dof)
 	z = t.rvs(size=(len(theta_0_par),pc))/t.std()
-	the_0 = (theta_0_par[:,numpy.newaxis] + numpy.dot(A,z)).T
+	while numpy.min(val)==numpy.inf:
+		A = (.5**count)*A
+		the_0 = (theta_0_par[:,numpy.newaxis] + numpy.dot(A,z)).T
+		count+=1
+		val = [flog(x,loglike,*loglikargs) for x in the_0]
+		print("Sampled MLE's",[flog(x,loglike,*loglikargs) for x in the_0])
 	return(the_0)
 
 

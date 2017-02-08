@@ -22,8 +22,8 @@ import warnings
 # Instead of log transform, consider transform (1+y)
 
 if __name__=='__main__':
-	poly_deg = 4
-	maxruns = 10000000
+	poly_deg = 1
+	maxruns = 100000
 	#beta1=.07
 	bm_file = "Days_BloodMeal.csv"
 	bc_file = "Days_BirdCounts.csv"
@@ -32,10 +32,10 @@ if __name__=='__main__':
 	bm_data = pd.read_csv(bm_file,index_col=0)
 	bm_time = numpy.array([int(x) for x in bm_data.columns])
 	bm_data = bm_data.as_matrix()
-	tstart = 90 # Setting Start Time to April 1st
-	tend = 270
+	tstart = Seasonal_ODE.time_transform(90) # Setting Start Time to April 1st
+	tend = Seasonal_ODE.time_transform(270)
 	flag = 0
-	write_flag = 0   # If set to 0 will write the results, if set to 1 will not
+	write_flag = 1   # If set to 0 will write the results, if set to 1 will not
 	if flag==0:  # This section runs the MCMC for the various areas of interest, and stores the results
 		mos_coeff,mos_results = bloodmeal.vector_coeff(msq_file,MCMC.poly_poiss_log_lik,poly_deg,maxruns=maxruns)
 		bm_coeff_mat,bm_results = bloodmeal.get_bloodmeal_sample(bm_file,MCMC.bm_polynomial_loglikelihood,poly_deg,maxruns=maxruns)
@@ -104,7 +104,7 @@ if __name__=='__main__':
 
 	elif flag==2:  #Statistical Comparison of the Different Poly Degrees, run based off optimal DIC
 		import pylab
-		poly_deg_vals = [1,2]  #Can be updated to include different poly degrees
+		poly_deg_vals = [1,2,3,4]  #Can be updated to include different poly degrees
 		bc_DIC_holder = numpy.zeros((len(poly_deg_vals),7))
 		mos_DIC = numpy.zeros(len(poly_deg_vals))
 		bm_DIC = numpy.zeros(len(poly_deg_vals))
