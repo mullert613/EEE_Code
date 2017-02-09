@@ -109,6 +109,7 @@ if __name__=='__main__':
 		mos_DIC = numpy.zeros(len(poly_deg_vals))
 		bm_DIC = numpy.zeros(len(poly_deg_vals))
 		for i in range(len(poly_deg_vals)):
+			print(i)
 			bc_DIC_holder[i,:] = pickle.load(open('host_coeff_poly_deg(%d)_DIC.pkl' %poly_deg_vals[i],'rb'))
 			mos_DIC[i] = pickle.load(open('Mos_coeff_poly_deg(%d)_DIC.pkl' %poly_deg_vals[i],'rb'))
 			bm_DIC[i] = pickle.load(open('bloodmeal_coeff_poly_deg(%d)_DIC.pkl' %poly_deg_vals[i],'rb'))
