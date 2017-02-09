@@ -11,7 +11,7 @@ p3
 tp4
 Rp5
 (I1
-(I1
+(L1L
 tp6
 cnumpy
 dtype
@@ -30,7 +30,7 @@ I-1
 I0
 tp12
 bI00
-S"\xd5'\xee\xda_\xcf\xb3\xc0"
+S'\xf94\xd0H\xf9\xcf\xb3\xc0'
 p13
 tp14
 b.

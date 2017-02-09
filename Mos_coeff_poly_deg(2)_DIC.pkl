@@ -30,7 +30,7 @@ I-1
 I0
 tp12
 bI00
-S'*}\xbd s\xd0\xb3\xc0'
+S'3\xa9\x8b\xbdL\xd0\xb3\xc0'
 p13
 tp14
 b.

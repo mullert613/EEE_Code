@@ -4,6 +4,7 @@ import unittest
 import scipy.stats
 import joblib
 import warnings
+import Seasonal_ODE
 
 # 
 def example():   # Simple run,sigma,lbd,theta_0 values to be used in test code
@@ -16,6 +17,7 @@ def example():   # Simple run,sigma,lbd,theta_0 values to be used in test code
 def get_DIC(results,loglikelihood,datafile):
 	data = pd.read_csv(datafile,index_col=0)
 	time = numpy.array([int(x) for x in data.columns],dtype=float)
+	time = Seasonal_ODE.time_transform(time)
 	data_mat = data.as_matrix()
 	p = len(results)
 	DIC_vals=numpy.zeros(p)

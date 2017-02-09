@@ -22,8 +22,8 @@ import warnings
 # Instead of log transform, consider transform (1+y)
 
 if __name__=='__main__':
-	poly_deg = 1
-	maxruns = 100000
+	poly_deg = 4
+	maxruns = 5000000
 	#beta1=.07
 	bm_file = "Days_BloodMeal.csv"
 	bc_file = "Days_BirdCounts.csv"
@@ -34,15 +34,15 @@ if __name__=='__main__':
 	bm_data = bm_data.as_matrix()
 	tstart = Seasonal_ODE.time_transform(90) # Setting Start Time to April 1st
 	tend = Seasonal_ODE.time_transform(270)
-	flag = 0
-	write_flag = 1   # If set to 0 will write the results, if set to 1 will not
+	flag = 2
+	write_flag = 0   # If set to 0 will write the results, if set to 1 will not
 	if flag==0:  # This section runs the MCMC for the various areas of interest, and stores the results
 		mos_coeff,mos_results = bloodmeal.vector_coeff(msq_file,MCMC.poly_poiss_log_lik,poly_deg,maxruns=maxruns)
 		bm_coeff_mat,bm_results = bloodmeal.get_bloodmeal_sample(bm_file,MCMC.bm_polynomial_loglikelihood,poly_deg,maxruns=maxruns)
 		bc_coeff_mat,bc_results = BirdCount.get_birdcounts_sample(bc_file,MCMC.poly_poiss_log_lik,poly_deg,maxruns=maxruns)
 		#BirdCount.BirdcountTest(bc_file,bc_coeff_mat,poly_deg)
 		bc_DIC = MCMC.get_DIC(bc_results,MCMC.poly_poiss_log_lik,bc_file)
-		bm_DIC = MCMC.DIC(bm_results,MCMC.bm_polynomial_loglikelihood,bm_data,bm_time)
+		bm_DIC = MCMC.DIC(bm_results,MCMC.bm_polynomial_loglikelihood,bm_data,Seasonal_ODE.time_transform(bm_time))
 		mos_DIC = MCMC.get_DIC(mos_results,MCMC.poly_poiss_log_lik,msq_file)
 
 		if write_flag ==0:
