@@ -87,7 +87,7 @@ if __name__=='__main__':
 		beta_flag = 0  # Set = 0 to run the beta optimization, otherwise will use a stored value of beta
 		if beta_flag ==0:  # Is flag supposed to be ODE_flag?  
 			#beta1 = scipy.optimize.leastsq(Seasonal_ODE.findbeta,.5,args=(rhs_func,bm_amean,bm_bmean,bc_coeff_mat,mos_coeff,tstart,tend,flag,ODE_flag))
-			beta1 = scipy.optimize.minimize(Seasonal_ODE.findbeta,.5,args=(rhs_func,bm_coeff_mat,bc_coeff_mat,mos_coeff,tstart,tend,flag,ODE_flag),method="COBYLA",bounds=[(0,1)],options={"disp":True,"iprint":2,"rhobeg":.25})
+			beta1 = scipy.optimize.minimize(Seasonal_ODE.findbeta,.5,args=(rhs_func,bm_coeff_mat,bc_coeff_mat,mos_coeff,tstart,tend,1,ODE_flag),method="COBYLA",bounds=[(0,1)],options={"disp":True,"iprint":2,"rhobeg":.25})
 			output5 = open('poly_deg(%d)_beta1.pkl' %poly_deg, 'wb')
 			pickle.dump(beta1.x,output5)
 		else:
@@ -110,17 +110,17 @@ if __name__=='__main__':
 		bm_DIC = numpy.zeros(len(poly_deg_vals))
 		for i in range(len(poly_deg_vals)):
 			print(i)
-			bc_DIC_holder[i,:] = pickle.load(open('host_coeff_poly_deg(%d)_DIC.pkl' %poly_deg_vals[i],'rb'))
-			mos_DIC[i] = pickle.load(open('Mos_coeff_poly_deg(%d)_DIC.pkl' %poly_deg_vals[i],'rb'))
-			bm_DIC[i] = pickle.load(open('bloodmeal_coeff_poly_deg(%d)_DIC.pkl' %poly_deg_vals[i],'rb'))
+			bc_DIC_holder[i,:] = pickle.load(open('host_coeff_poly_deg(%d)_DIC.pkl' %poly_deg_vals[i],'r'))
+			mos_DIC[i] = pickle.load(open('Mos_coeff_poly_deg(%d)_DIC.pkl' %poly_deg_vals[i],'r'))
+			bm_DIC[i] = pickle.load(open('bloodmeal_coeff_poly_deg(%d)_DIC.pkl' %poly_deg_vals[i],'r'))
 		bc_DIC = numpy.sum(bc_DIC_holder,axis=1)
 		bc_poly_deg = poly_deg_vals[numpy.where(bc_DIC==numpy.min(bc_DIC))[0][0]]
 		mos_poly_deg = poly_deg_vals[numpy.where(mos_DIC==numpy.min(mos_DIC))[0][0]]
 		bm_poly_deg = poly_deg_vals[numpy.where(bm_DIC == numpy.min(bm_DIC))[0][0]]
 		#bm_poly_deg = 1  # When we update the code to allow for polynomial bm calc, replace with above line
-		bm_coeff_mat =pickle.load(open('bloodmeal_coeff_poly_deg(%d).pkl' %bm_poly_deg,'rb'))
-		mos_coeff = pickle.load(open('Mos_coeff_poly_deg(%d).pkl' %mos_poly_deg, 'rb'))
-		bc_coeff_mat = pickle.load(open('host_coeff_poly_deg(%d).pkl' %bc_poly_deg,'rb'))
+		bm_coeff_mat =pickle.load(open('bloodmeal_coeff_poly_deg(%d).pkl' %bm_poly_deg,'r'))
+		mos_coeff = pickle.load(open('Mos_coeff_poly_deg(%d).pkl' %mos_poly_deg, 'r'))
+		bc_coeff_mat = pickle.load(open('host_coeff_poly_deg(%d).pkl' %bc_poly_deg,'r'))
 
 		poly_deg = [bc_poly_deg,bm_poly_deg,mos_poly_deg]
 		rhs_func = Seasonal_ODE.test_rhs
@@ -133,10 +133,28 @@ if __name__=='__main__':
 		Seasonal_ODE.eval_ode_results(Y,bm_coeff_mat,bc_coeff_mat,mos_coeff,tstart,tend,bc_file,ODE_flag)
 		pylab.show()
 
-
-
-
-
+while 1==0:
+	import pylab
+	poly_deg = [1,2,3,4]
+	bm_file = "Days_BloodMeal.csv"
+	bc_file = "Days_BirdCounts.csv"
+	#msq_file = "Vector_Data.csv"
+	msq_file = "Vector_Data(NoZeros).csv"
+	pylab.figure(1)
+	for j in poly_deg:
+		bm_coeff_mat =pickle.load(open('bloodmeal_coeff_poly_deg(%d).pkl' %j,'r'))
+		bm_results = pickle.load(open('bloodmeal_coeff_poly_deg(%d)_full_results.pkl' %j,'r'))
+		bloodmeal.BloodmealTest(bm_file,bm_coeff_mat,j)
+	pylab.figure(2)
+	for j in poly_deg:
+		bc_coeff_mat = pickle.load(open('host_coeff_poly_deg(%d).pkl' %j,'r'))	
+		bc_results = pickle.load(open('host_coeff_poly_deg(%d)_full_results.pkl' %j,'r'))
+		BirdCount.BirdcountTest(bc_file,bc_coeff_mat,j)
+	pylab.figure(3)
+	for j in poly_deg:
+		mos_results = pickle.load(open('Mos_coeff_poly_deg(%d)_full_results.pkl' %j,'r'))
+		mos_coeff = pickle.load(open('Mos_coeff_poly_deg(%d).pkl' %j, 'r'))
+		bloodmeal.MosquitoTest(msq_file,mos_coeff,j)
 
 
 # Lines used for debugging:

@@ -98,7 +98,7 @@ def test_rhs(Y,t, beta1_rho,beta2, gammab, v, b, d, dv, dEEE, bc_coeff_mat,bm_co
 	dsv = bloodmeal.Xi(mos_coeff,t)*iv - lambdav*sv
 	div = lambdav*sv - bloodmeal.Xi(mos_coeff,t)*iv
 
-	dY = numpy.hstack((ds,di,dr,dsv,div))
+	dY = 365./2*numpy.hstack((ds,di,dr,dsv,div))  # the 365/2 is the rate of change of the time transform
 	return dY
 
 def log_test_rhs(Y,t, beta1_rho,beta2, gammab, v, b, d, dv, dEEE, bc_coeff_mat,bm_coeff_mat,mospop,mosprime,mosin,fun,mos_coeff,p):
@@ -314,6 +314,7 @@ def eval_ode_results(Y,bm_coeff_mat,bc_coeff_mat,mos_coeff,tstart,tend,bird_data
 	return()
 
 def findbeta(beta1,rhs_func,bm_coeff_mat,bc_coeff_mat,mos_coeff,tstart,tend,flag,ODE_flag):  
+	print beta1
 	p = len(bm_coeff_mat[:,0])+1
 	Y = run_ode(beta1,rhs_func,bm_coeff_mat,bc_coeff_mat,mos_coeff,tstart,tend,flag)
 	s,i,r,sv,iv = get_SIR_vals(Y,p)
@@ -327,6 +328,7 @@ def findbeta(beta1,rhs_func,bm_coeff_mat,bc_coeff_mat,mos_coeff,tstart,tend,flag
 		i = i[-1]*N
 		finalrec = numpy.ma.divide(r.sum()+i.sum(),N.sum())
 		final = finalrec-.13
+	print(numpy.abs(final))
 	return numpy.abs(final)
 
 def debug_fun(Y,T, beta1_rho,beta2, gammab, v, b, d, dv, dEEE, bc_coeff_mat,bm_coeff_mat,mospop,mosprime,mosin,fun,mos_coeff,p):
